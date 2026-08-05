@@ -12,12 +12,17 @@ from src.web.webhook_server import create_webhook_app
 logging.basicConfig(level=logging.INFO)
 
 async def main():
-    db_path = settings.database_url.replace("sqlite+aiosqlite:///", "")
-    db_dir = os.path.dirname(db_path)
+    db_url = settings.database_url
+    if os.path.exists("/data") and "data/" in db_url and not "sqlite+aiosqlite:////" in db_url:
+        db_url = "sqlite+aiosqlite:////data/finance_bot.db"
+
+    raw_path = db_url.replace("sqlite+aiosqlite:////", "/").replace("sqlite+aiosqlite:///", "")
+    db_dir = os.path.dirname(raw_path)
     if db_dir and not os.path.exists(db_dir):
         os.makedirs(db_dir, exist_ok=True)
 
-    engine, async_session_factory = await init_db_engine(settings.database_url)
+    logging.info(f"Using database path: {db_url}")
+    engine, async_session_factory = await init_db_engine(db_url)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
