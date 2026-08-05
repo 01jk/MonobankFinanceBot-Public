@@ -87,3 +87,10 @@ class DAO:
             await self.session.commit()
             return tx.is_internal
         return False
+
+    async def update_account_balance(self, account_id: str, new_balance: int):
+        await self.session.execute(
+            update(Account).where(Account.id == account_id).values(balance=new_balance)
+        )
+        await self.session.commit()
+

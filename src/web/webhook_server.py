@@ -51,6 +51,7 @@ def create_webhook_app(session_factory: async_sessionmaker, bot: Bot) -> web.App
                     )
 
                     saved = await dao.add_transaction(tx)
+                    await dao.update_account_balance(account_id, stmt_item["balance"])
                     if saved:
                         amount_uah = abs(tx.amount) / 100.0
                         tx_type = "📈 Доход" if tx.amount > 0 else "💸 Расход"
