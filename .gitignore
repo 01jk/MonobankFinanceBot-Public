@@ -35,3 +35,6 @@ env/
 dist/
 build/
 *.egg-info/
+
+docs/
+monobank-api-community-docs-main/
