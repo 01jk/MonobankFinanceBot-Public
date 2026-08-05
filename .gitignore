@@ -1,0 +1,37 @@
+# Environment variables & secrets
+.env
+
+# SQLite databases & persistent data
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest cache
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# IDE / Editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Gemini & Agent workspace artifacts
+.gemini/
+.agents/
+
+# Build & distribution
+dist/
+build/
+*.egg-info/

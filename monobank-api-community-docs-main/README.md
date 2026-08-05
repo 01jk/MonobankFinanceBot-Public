@@ -1,0 +1,258 @@
+# Monobank API community docs
+
+<img alt="logo" src="https://user-images.githubusercontent.com/59166229/211002581-faa622e4-d47f-4c93-9d9d-afce50484339.png" width="200" height="200" />
+
+Більшість інформації у поточному репозиторії буде відноситись саме до Monobank open API.
+
+Щодо інших API див. інформацію [нижче](#інші-api-створені-командою-mono).
+
+> Інформація структурована силами community користувачів Monobank API на основі
+> практичного досвіду використання або зворотнього зв'язку представників Monobank у 
+> Telegram чаті community (посилання на чат доступне на сторінці документації до API)
+
+## API
+
+Monobank Open API - API що доступне публічно (без аутентифікації), або клієнтам банку за токеном аутентифікації,
+або провайдерам послуг.
+
+Дане API це особиста ініціатива частини із розробників Mono. Підтримується у вільний час і надається як є.
+
+Під "підтримується у вільний час" мається на увазі, що над проектом Open API працюють співробітники monobank, але для нього немає  "спринтів", "ПМ", "плану розвитку", "показників" і  всього того, що є у інших напрямках.
+Тобто допрацювання робляться або за власною ініціативою, або за пропозицією ззовні (але з нижчим пріоритетом відносно розвитку інших напрямків).
+
+За багатьма причинами (в тому числі - безпековими) Open API надає можливість використання лише "Read-only" операції.
+Можливостей формування тих чи інших транзакцій або змінювання даних клієнту немає.
+
+Тільки розробник може надати _абсолютно точну та вичерпну_ інформацію по даному API.
+
+### Загальний (персональний) API
+
+Посилання на документацію API: https://api.monobank.ua/docs/ (або: https://monobank.ua/api-docs/monobank)
+
+> Див. також OpenAPI specification [open_personal_api.json](specs/open_personal_api.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/open_personal_api.json
+
+### Корпоративний API для провайдерів послуг
+
+Посилання на документацію API: https://api.monobank.ua/docs/corporate.html (або: https://monobank.ua/api-docs/providers)
+
+"Production" доступ до API надається ЛИШЕ після підтвердження заявки відправленої через API: 
+https://api.monobank.ua/docs/corporate.html#tag/Avtorizaciya-ta-nalashtuvannya-kompaniyi/paths/~1personal~1auth~1registration/post
+
+> Загальна схема взаємодії з API є досить схожою до схеми взаємодії з персональним API, 
+> тож до моменту отримання підтвердження заявки на використання API для провайдерів -
+> для тестування можна використовувати персональний API
+
+Алгоритм підпису запитів до API ("X-Sign" HTTP header): https://gist.github.com/Sominemo/64845669d6326f2f73d356f025656bdb#signing-the-request
+
+> Див. також OpenAPI specification [open_provider_api.json](specs/open_provider_api.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/open_provider_api.json
+
+#### Блок-схема для визначення чи потрібен Вам API для провайдерів послуг
+
+<details>
+<summary>Показати блок-схему</summary>
+
+```mermaid
+flowchart TD
+    A([Початок])
+    B{У проєкті задіяно сервер?}
+    C{"Застосунок для обмеженого кола користувачів? (родина, друзі, навчальний проєкт)"}
+    D{Запити виконуються напряму з машини користувача на api.monobank.ua, токени та ідентифікатори не передаються на ваш сервер?}
+    Corporate[Корпоративний API]
+    Personal[Персональний API]
+
+    A --> B
+    B -- Так --> C
+    B -- Ні --> Personal
+    C -- Так --> Personal
+    C -- Ні --> D
+    D -- Так --> Personal
+    D -- Ні --> Corporate
+```
+
+> Автор: Sominemo
+
+</details>
+
+## Telegram API community
+
+У Telegram створено чат для спільноти користувачів Monobank Open API для наступного:
+- надання зворотного зв'язку щодо користування API;
+- взаємодопомога користувачів щодо питань використання API;
+
+Для збереження балансу корисної інформації у чаті та економії часу інших учасників чату, вважається хорошим тоном:
+- не використовувати чат як фріланс біржу;
+- не використовувати чат як "кружок програмістів";
+- обговорювати теми близькі саме до питань користування Monobank Open API;
+- поважати час інших та ознайомлюватись з інформацією наданою тут, у закріплених повідомленнях чату, документації.
+
+> Посилання на чат доступне на сторінці документації до API.
+
+## Незадокументовані особливості API
+
+### 1. Обмеження максимальної кількості платежів повернутих на один запит до API
+
+Endpoint виписки транзакцій ([docs](https://api.monobank.ua/docs/#tag/Kliyentski-personalni-dani/paths/~1personal~1statement~1{account}~1{from}~1{to}/get)) за одне звернення повертає не більше 500 транзакцій відсортованих з кінця періоду 
+(тобто від часу `to` до `from`).
+
+> Можлива причина введеного обмеження на кількість результатів та відсутність інструментів пагінації з offset - https://use-the-index-luke.com/sql/partial-results/fetch-next-page
+
+Рекомендації:
+- Якщо кількість транзакцій = 500 - необхідно виконати додатковий запит змінивши (зменшивши) час `to` до часу останнього платежу, з відповіді.
+- Якщо знову кількість транзакцій = 500 - необхідно виконувати запити до того часу поки кількість транзакцій не буде < 500.
+- Відповідно якщо кількість транзакцій < 500 - всі платежі за вказаний період було отримано успішно.
+
+## Часті питання
+
+### 1. Як отримати OpenAPI specification щодо API?
+
+Маючи OpenAPI specification (https://www.openapis.org/) ви можете використати code generator для вашої мови програмування,
+відслідковувати зміни у API порівнюючи схему що ви використали (і зберегли) "місяць тому" і поточну, тощо.
+
+> **Note**: за відсутності API changelogs в якості експерименту мейнтейнерами community
+> документації час від часу (вручну) синхронізується OpenAPI specification в директорію [specs](specs/).
+> Наприклад [specs/open_personal_api.json](specs/open_personal_api.json)
+
+Не дивлячись на те, що явного способу скачати OpenAPI specification у документації Monobank не надається - проте технічна можливість дізнатись її - присутня.
+
+Для OpenAPI - це відкрити документацію за допомогою браузеру і виконати у консолі наступний JS код:
+```js
+const openApiSchema = __redoc_state.spec.data;
+const jsonSchema = JSON.stringify(openApiSchema, null, 2);
+console.log(jsonSchema);
+```
+
+У результаті - у консолі буде виведено OpenAPI specification JSON string - який ви можете скопіювати собі у файл, у онлайн редактор https://editor.swagger.io, тощо
+
+> Для інших API інформація щодо можливості дізнатись OpenAPI specification уточнюється у релевантних розділах нижче.
+
+### 2. Чи можна отримати теги створені користувачем до платежів з виписки?
+
+Ні. Коли це буде доступно - невідомо.
+
+## Troubleshooting
+
+### 1. Помилка при зверненні до API - 403 status code з HTML у тілі відповіді або "glory to Ukraine! glory to the heroes!"
+
+Якщо при роботі з API Ви отримуєте помилку 403 - скоріше за все вас заблокував AWS 
+(що "захищає" API від атак зловмисників).
+
+Нажаль, ні розробники (представники банку), ні community не можуть допомогти з розблокуванням.
+
+Зазвичай блокування відбуваються через надмірну активність з боку IP адреси відправника
+і блокується інтервалом 24 години.
+
+Рекомендовано переглянути відповідність частоти використання API до рекомендацій наданих в документації та використання "білої" IP адреси для вашої системи.
+
+> Pro tip: якщо вам потрібні виписки - розгляньте можливість використання WebHook з збереженням інформації щодо платежів у базі даних вашої системи.
+
+Тіло відповіді може виглядати наступним чином:
+```
+ <html>
+    <head>
+      <title>403 Forbidden</title>
+    </head>
+    
+    <body>
+      <center>
+        <h1>403 Forbidden</h1>
+      </center>
+    </body>
+</html>
+```
+
+або так:
+```
+glory to Ukraine!
+glory to the heroes!
+```
+
+## Інші API створені командою mono 
+
+Monobank має не тільки open API, але й інші:
+1. Інтернет-еквайринг
+2. Покупка частинами
+3. Expirenza by mono (shaketopay)
+4. API для роботи з рахунками юридичних осіб
+5. Open Banking
+6. mono checkout (застаріло)
+
+Також перелік API сервісів є присутнім з швидким переходом до документації перелічених сервісів можна побачити за даною адресою https://monobank.ua/api-docs
+
+Щодо даних сервісів Вам можуть надати консультацію співробітники Monobank, до яких Ви можете звернутись
+за каналами комунікації що надані на лендінг сторінках сервісів.
+
+### 1. Інтернет-еквайринг (acquiring)
+
+Посилання на лендінг сторінку сервісу "Plata by mono": https://monobank.ua/plata-by-mono
+
+Посилання на документацію API: https://api.monobank.ua/docs/acquiring.html (або https://monobank.ua/api-docs/acquiring)
+
+#### Known integrations
+
+Monobank надає інформацію щодо існуючих інтеграцій (як офіційних, що підтримуються співробітниками Monobank, так і розроблених їх партнерами) - https://monobank.ua/plata-by-mono/integrations
+
+За посиланням вище можна знайти також інструкції щодо встановлення інтеграцій до відомих платформ (CMS, конструктори вебсайтів, чат-боти тощо).
+
+#### OpenAPI specification
+
+> Див. також [acquiring.json](specs/acquiring.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/acquiring.json
+
+Аналогічно до способу отримання специфікації для Monobank open API (див. вище FAQ).
+
+### 2. Покупка частинами
+
+Посилання на лендінг сторінку сервісу: https://monobank.ua/chast/vendors
+
+Посилання на документацію API: https://u2-demo-ext.mono.st4g3.com/docs/index.html (або https://monobank.ua/api-docs/chast)
+
+#### OpenAPI specification
+
+> Див. також [chast.json](specs/chast.json)
+>
+> Відкрити у Swagger Editor: https://editor.swagger.io/?url=https://raw.githubusercontent.com/andrew-demb/monobank-api-community-docs/refs/heads/main/specs/chast.json
+
+На момент написання цього розділу - при відкритті документації у консолі браузеру - Network - був запит на `https://u2-demo-ext.mono.st4g3.com/v2/api-docs`, де поверталась OpenAPI specification.
+
+Отримати за домопогою `curl`:
+```bash
+curl 'https://u2-demo-ext.mono.st4g3.com/v2/api-docs' -H 'accept: application/json'
+```
+
+### 3. Expirenza by mono (shaketopay)
+
+Посилання на лендінг сторінку сервісу: https://shaketopay.com.ua
+
+Посилання на документацію API: https://docs.expirenza.com/api
+
+OpenAPI specification не може бути представленим, оскільки вся взаємодія йде через WebSocket.
+
+### 4. API для роботи з рахунками юридичних осіб
+
+Посилання на документацію API: https://corp-api.monobank.ua
+
+OpenAPI specification є доступним до скачування з UI сторінки і не відстежується у поточному репозиторії.
+
+### 5. Open Banking
+
+Що це: https://bank.gov.ua/ua/payments/open-banking
+
+Посилання на документацію API: https://ob.mono.bank
+
+OpenAPI specification є доступним до скачування з UI сторінки і не відстежується у поточному репозиторії.
+
+### 6. mono checkout (застаріло)
+
+**ВАЖЛИВО**: даний сервіс наразі не є доступним для нових клієнтів і наразі знаходиться в процесі закриття.
+
+> Посилання на лендінг сторінку сервісу "mono checkout": https://checkout.mono.bank
+> 
+> Посилання на документацію API варто шукати на сторінці лендінгу (на момент написання цього тексту - це було посилання на Google Docs).
+> 
+> Є "особлива" окрема документація щодо верифікації callback від банку на предмет "довіреності" - https://docs.google.com/document/d/1t6UZhPn3UHHBmD1BJn22Z9bk5YGzVvUWwa-lnrv6Lj0/view. 
+> Допоки посилання на таку частину документації відсутнє у основній документації до сервісу - посилання буде жити тут.
