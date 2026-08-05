@@ -45,3 +45,24 @@ async def process_report_callback(callback: CallbackQuery, session: AsyncSession
         text += "ℹ️ Расходов за данный период не найдено."
 
     await callback.message.edit_text(text, parse_mode="Markdown")
+
+@router.callback_query(F.data.startswith("export_csv_"))
+async def process_export_csv_callback(callback: CallbackQuery, session: AsyncSession):
+    scope = callback.data.split("_")[2]
+    now = datetime.now(timezone.utc)
+    
+    if scope == "month":
+        start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+        filename = f"monobank_finance_{now.year}_{now.month:02d}.csv"
+    else:  # all
+        start = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        filename = f"monobank_finance_all_{now.strftime('%Y%m%d')}.csv"
+
+    from aiogram.types import BufferedInputFile
+    from src.services.exporter import generate_transactions_csv
+
+    csv_bytes = await generate_transactions_csv(session, callback.from_user.id, start, now + timedelta(days=1))
+    file = BufferedInputFile(csv_bytes, filename=filename)
+
+    await callback.message.answer_document(file, caption=f"📄 Выгрузка доходов и расходов (`{filename}`)", parse_mode="Markdown")
+    await callback.answer()

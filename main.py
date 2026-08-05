@@ -48,6 +48,9 @@ async def main():
     await site.start()
     logging.info(f"Webhook server started on port {settings.port}")
 
+    from src.services.scheduler import check_and_send_scheduled_reports
+    scheduler_task = asyncio.create_task(check_and_send_scheduled_reports(async_session_factory, bot))
+
     try:
         await dp.start_polling(bot)
     finally:

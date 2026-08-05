@@ -12,7 +12,8 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
 def get_period_inline_keyboard() -> InlineKeyboardMarkup:
     kb = [
         [InlineKeyboardButton(text="Сегодня", callback_data="report_today"), InlineKeyboardButton(text="За неделю", callback_data="report_week")],
-        [InlineKeyboardButton(text="Текущий месяц", callback_data="report_month")]
+        [InlineKeyboardButton(text="Текущий месяц", callback_data="report_month")],
+        [InlineKeyboardButton(text="📥 Скачать CSV (Месяц)", callback_data="export_csv_month"), InlineKeyboardButton(text="📥 Скачать CSV (Всё)", callback_data="export_csv_all")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
