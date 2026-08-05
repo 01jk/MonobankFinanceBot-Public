@@ -25,8 +25,17 @@ def create_webhook_app(session_factory: async_sessionmaker, bot: Bot) -> web.App
 
                 async with session_factory() as session:
                     dao = DAO(session)
-                    res = await session.execute(select(User).where(User.webhook_secret == secret))
-                    user = res.scalar_one_or_none()
+                    from src.config import settings
+                    if secret == settings.webhook_secret:
+                        res = await session.execute(select(User).where(User.is_admin == True))
+                        user = res.scalar_one_or_none()
+                        if not user:
+                            res = await session.execute(select(User))
+                            user = res.scalars().first()
+                    else:
+                        res = await session.execute(select(User).where(User.webhook_secret == secret))
+                        user = res.scalar_one_or_none()
+
                     if not user:
                         return web.Response(status=403, text="Forbidden")
 

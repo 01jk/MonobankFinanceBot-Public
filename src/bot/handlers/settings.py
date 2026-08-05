@@ -41,8 +41,9 @@ async def sync_handler(message: Message, session: AsyncSession):
         await dao.save_accounts(data.get("accounts", []), user_id=user.id)
         
         # Setup webhook if base_url is set
-        if settings.webhook_base_url and user.webhook_secret:
-            wh_url = f"{settings.webhook_base_url}/webhook/mono/{user.webhook_secret}"
+        wh_secret = settings.webhook_secret or user.webhook_secret
+        if settings.webhook_base_url and wh_secret:
+            wh_url = f"{settings.webhook_base_url}/webhook/mono/{wh_secret}"
             await client.set_webhook(token, wh_url)
 
         await message.answer("✅ Данные счетов и Webhook успешно обновлены!")
@@ -62,7 +63,7 @@ async def token_input_handler(message: Message, session: AsyncSession):
     dao = DAO(session)
     user = await dao.get_or_create_user(message.from_user.id)
     if not user.webhook_secret:
-        user.webhook_secret = str(uuid.uuid4())
+        user.webhook_secret = settings.webhook_secret or str(uuid.uuid4())
     
     await dao.set_mono_token(user.id, token, user.webhook_secret)
 
@@ -71,8 +72,9 @@ async def token_input_handler(message: Message, session: AsyncSession):
         data = await client.get_client_info(token)
         await dao.save_accounts(data.get("accounts", []), user_id=user.id)
 
-        if settings.webhook_base_url and user.webhook_secret:
-            wh_url = f"{settings.webhook_base_url}/webhook/mono/{user.webhook_secret}"
+        wh_secret = settings.webhook_secret or user.webhook_secret
+        if settings.webhook_base_url and wh_secret:
+            wh_url = f"{settings.webhook_base_url}/webhook/mono/{wh_secret}"
             await client.set_webhook(token, wh_url)
 
         await message.answer("✅ Токен привязан! Счета и Webhook успешно синхронизированы.")
