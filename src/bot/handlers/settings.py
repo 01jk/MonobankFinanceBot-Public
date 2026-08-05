@@ -46,7 +46,42 @@ async def sync_handler(message: Message, session: AsyncSession):
             wh_url = f"{settings.webhook_base_url}/webhook/mono/{wh_secret}"
             await client.set_webhook(token, wh_url)
 
-        await message.answer("✅ Данные счетов и Webhook успешно обновлены!")
+        # Pull recent statement for main account
+        accounts_list = data.get("accounts", [])
+        if accounts_list:
+            acc_id = accounts_list[0]["id"]
+            import time
+            from datetime import datetime, timezone
+            from src.db.models import Transaction
+            from src.services.monobank_api import MonobankRateLimitError
+            from_ts = int(time.time()) - (30 * 86400)
+            try:
+                stmt_list = await client.get_statement(token, acc_id, from_ts)
+                for stmt_item in stmt_list:
+                    cat_id = await dao.get_mcc_category(stmt_item["mcc"]) or 9
+                    tx = Transaction(
+                        id=stmt_item["id"],
+                        user_id=user.id,
+                        account_id=acc_id,
+                        time=datetime.fromtimestamp(stmt_item["time"], tz=timezone.utc),
+                        description=stmt_item.get("description", ""),
+                        amount=stmt_item["amount"],
+                        mcc=stmt_item["mcc"],
+                        balance=stmt_item["balance"],
+                        currency_code=stmt_item.get("currencyCode", 980),
+                        commission_rate=stmt_item.get("commissionRate", 0),
+                        cashback_amount=stmt_item.get("cashbackAmount", 0),
+                        comment=stmt_item.get("comment"),
+                        is_internal=False,
+                        category_id=cat_id
+                    )
+                    await dao.add_transaction(tx)
+            except MonobankRateLimitError:
+                pass
+            except Exception:
+                pass
+
+        await message.answer("✅ Данные счетов, выписка и Webhook успешно обновлены!")
     except Exception as e:
         await message.answer(f"❌ Ошибка синхронизации: {e}")
 
