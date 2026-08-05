@@ -34,6 +34,10 @@ def create_webhook_app(session_factory: async_sessionmaker, bot: Bot) -> web.App
                             res = await session.execute(select(User))
                             user = res.scalars().first()
 
+                    from src.config import settings
+                    if not user and settings.admin_telegram_id:
+                        user = await dao.get_or_create_user(settings.admin_telegram_id, is_admin=True)
+
                     if not user:
                         return web.Response(status=403, text="Forbidden")
 

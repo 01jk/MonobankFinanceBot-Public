@@ -45,3 +45,24 @@ async def seed_initial_data(session: AsyncSession, mcc_loc_path: str = "mcc-loc.
         
         session.add_all(mappings)
         await session.commit()
+
+    from src.config import settings
+    from src.db.models import User
+    if settings.admin_telegram_id:
+        res = await session.execute(select(User).where(User.id == settings.admin_telegram_id))
+        admin = res.scalar_one_or_none()
+        if not admin:
+            admin = User(
+                id=settings.admin_telegram_id,
+                mono_token=settings.mono_api_token,
+                webhook_secret=settings.webhook_secret,
+                is_admin=True
+            )
+            session.add(admin)
+            await session.commit()
+        else:
+            if settings.mono_api_token and not admin.mono_token:
+                admin.mono_token = settings.mono_api_token
+            if settings.webhook_secret and not admin.webhook_secret:
+                admin.webhook_secret = settings.webhook_secret
+            await session.commit()
