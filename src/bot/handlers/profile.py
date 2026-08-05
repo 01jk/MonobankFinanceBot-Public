@@ -3,6 +3,7 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.db.dao import DAO
+from src.services.monobank_api import MonobankClient
 
 router = Router()
 
@@ -11,7 +12,20 @@ async def profile_handler(message: Message, session: AsyncSession):
     if settings.admin_telegram_id and message.from_user.id != settings.admin_telegram_id:
         return
     dao = DAO(session)
+    user = await dao.get_or_create_user(message.from_user.id)
     accounts = await dao.get_user_accounts(message.from_user.id)
+
+    token = user.mono_token or settings.mono_api_token
+    if not accounts and token:
+        client = MonobankClient()
+        try:
+            data = await client.get_client_info(token)
+            await dao.save_accounts(data.get("accounts", []), user_id=user.id)
+            accounts = await dao.get_user_accounts(message.from_user.id)
+        except Exception as e:
+            await message.answer(f"⚠️ Ошибка получения счетов: {e}")
+            return
+
     if not accounts:
         await message.answer("ℹ️ Счета еще не загружены. Перейдите в ⚙️ Настройки и привяжите токен Монобанка.")
         return
@@ -25,3 +39,4 @@ async def profile_handler(message: Message, session: AsyncSession):
 
     text += f"\n💰 **Общий баланс:** `{total_balance:.2f}` UAH"
     await message.answer(text, parse_mode="Markdown")
+
